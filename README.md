@@ -1,4 +1,4 @@
-# HelloPlugin
+# Msg2Forward
 
 <p align="center"> <img src="./figs/2.png" alt="示例" width="400"> </p>
 
