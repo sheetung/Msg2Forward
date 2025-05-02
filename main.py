@@ -17,7 +17,7 @@ class Msg2Forward(BasePlugin):
            'threshold': 200,
             'sender_info': {
                 'user_id': '1000000',
-                'nickname': 'Langbot'
+                'nickname': 'bot'
             },
             'prompt_template': "长消息播报",
             'summary_template': "长消息播报转发"
@@ -26,18 +26,19 @@ class Msg2Forward(BasePlugin):
     @handler(NormalMessageResponded)
     async def group_normal_message_received(self, ctx: EventContext):
         msg = ctx.event.response_text
-
-        self.ap.logger.info(f"[Msg2Forward] 收到消息 | 长度: {len(msg)}")
+        launcher_id = ctx.event.launcher_id
+        sender_id = ctx.event.sender_id
+        self.ap.logger.info(f"[Msg2Forward] 收到消息 | 长度: {len(msg)}senderid={sender_id}launchid={launcher_id}")
         
-        if len(msg) >= self.forward_config['threshold']:
+        if len(msg) >= self.forward_config['threshold'] and sender_id != launcher_id:
 
             forward_messages = self.forwarder.convert_to_forward(msg)
             await self.forwarder.send_forward(
-                launcher_id=str(ctx.event.launcher_id),
+                launcher_id = str(launcher_id),
                 messages=forward_messages,
                 prompt=self.forward_config['prompt_template'],
                 summary=self.forward_config['summary_template'].format(count=len(msg)),
-                source="Langbot消息",
+                source="bot消息",
                 **self.forward_config['sender_info'],
                 mode='single' # single/multi 对应单条发出还是分条发出
             )

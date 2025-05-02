@@ -13,7 +13,7 @@
 
 ## 使用
 
-仅是配QQ端且平台使用napcat
+仅适配QQ端且平台使用napcat
 
 按照如图添加napcat网络配置
 
