@@ -39,7 +39,7 @@ class Msg2Forward(BasePlugin):
                 summary=self.forward_config['summary_template'].format(count=len(msg)),
                 source="Langbot消息",
                 **self.forward_config['sender_info'],
-                mode='multi'
+                mode='single' # single/multi 对应单条发出还是分条发出
             )
             ctx.prevent_default()  # 防止后续处理
             return
