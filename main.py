@@ -17,7 +17,7 @@ class Msg2Forward(BasePlugin):
            'threshold': 200,
             'sender_info': {
                 'user_id': '1000000',
-                'nickname': 'Lagbot'
+                'nickname': 'Langbot'
             },
             'prompt_template': "长消息播报",
             'summary_template': "长消息播报转发"
