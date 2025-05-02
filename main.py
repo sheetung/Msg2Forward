@@ -4,7 +4,10 @@ import re
 from .forward import ForwardMessage 
 
 # 注册插件
-@register(name="Msg2Forward", description="...", version="0.1", author="sheetung")
+@register(name="Msg2Forward", 
+          description="当langbot回复消息超过一定长度后，使用合并转发发出消息", 
+          version="0.1", 
+          author="sheetung")
 class Msg2Forward(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
