@@ -5,48 +5,110 @@ from .forward import ForwardMessage
 
 # 注册插件
 @register(name="Msg2Forward", 
-          description="当langbot回复消息超过一定长度后，使用合并转发发出消息", 
-          version="0.1", 
+          description="合并长消息转发和标签清理功能 | 当回复超过长度阈值时使用合并转发，并自动清理think等标签", 
+          version="0.2", 
           author="sheetung")
 class Msg2Forward(BasePlugin):
-    # 插件加载时触发
+    
+    # 默认配置（可在配置文件中覆盖）
+    default_config = {
+        'threshold': 200,          # 触发转发的消息长度阈值
+        'enable_tag_clean': True,  # 是否启用标签清理功能
+        'sender_info': {
+            'user_id': '1000000',  # 转发消息的发送者ID
+            'nickname': 'bot'      # 转发消息的发送者昵称
+        },
+        'prompt_template': "长消息播报",
+        'summary_template': "长消息播报转发",
+        'forward_mode': 'single'  # 转发模式：single/multi
+    }
+
     def __init__(self, host: APIHost):
-        # pass
+        # 初始化转发器和合并配置
         self.forwarder = ForwardMessage("127.0.0.1", 3000)
-        self.forward_config = {
-           'threshold': 200,
-            'sender_info': {
-                'user_id': '1000000',
-                'nickname': 'bot'
-            },
-            'prompt_template': "长消息播报",
-            'summary_template': "长消息播报转发"
-        }
+        self.config = self.default_config # 合并默认配置和用户配置
+        
+    def _clean_message_tags(self, msg: str) -> str:
+        """
+        清理消息中的特殊标签（增强版）
+        移除所有指定标签及其内容，并优化排版
+        """
+        if not self.config['enable_tag_clean']:
+            return msg
+            
+        # 清理完整标签对
+        for tag in ['think', 'details', 'summary', 'thinking']:
+            msg = re.sub(
+                rf'<{tag}\b[^>]*>[\s\S]*?</{tag}>', 
+                '', 
+                msg, 
+                flags=re.DOTALL | re.IGNORECASE
+            )
+        
+        # 清理残留标签和内容
+        msg = re.sub(
+            r'<(think|details|summary|thinking)\b[^>]*>[\s\S]*?(?=<|$)', 
+            '', 
+            msg, 
+            flags=re.IGNORECASE
+        )
+        
+        # 清理结束标签
+        msg = re.sub(
+            r'</(think|details|summary|thinking)>', 
+            '', 
+            msg, 
+            flags=re.IGNORECASE
+        )
+        
+        # 优化排版
+        msg = re.sub(r'\n{3,}', '\n\n', msg)          # 合并多个空行
+        msg = re.sub(r'(?<!\n)\n(?!\n)', ' ', msg)    # 单换行转空格
+        return msg.strip()
 
     @handler(NormalMessageResponded)
-    async def group_normal_message_received(self, ctx: EventContext):
-        msg = ctx.event.response_text
+    async def handle_message_response(self, ctx: EventContext):
+        original_msg = ctx.event.response_text
         launcher_id = ctx.event.launcher_id
         sender_id = ctx.event.sender_id
-        self.ap.logger.info(f"[Msg2Forward] 收到消息 | 长度: {len(msg)}senderid={sender_id}launchid={launcher_id}")
         
-        if len(msg) >= self.forward_config['threshold'] and sender_id != launcher_id:
-
-            forward_messages = self.forwarder.convert_to_forward(msg)
-            await self.forwarder.send_forward(
-                launcher_id = str(launcher_id),
-                messages=forward_messages,
-                prompt=self.forward_config['prompt_template'],
-                summary=self.forward_config['summary_template'].format(count=len(msg)),
-                source="bot消息",
-                **self.forward_config['sender_info'],
-                mode='single' # single/multi 对应单条发出还是分条发出
-            )
-            ctx.prevent_default()  # 防止后续处理
+        # Step 1: 清理消息标签
+        processed_msg = self._clean_message_tags(original_msg)
+        
+        # 如果清理后消息为空则跳过
+        if not processed_msg:
+            self.ap.logger.warning("[Msg2Forward] 处理后的消息为空，跳过处理")
             return
-            # event.add_return('reply', msg)
+            
+        # 记录处理结果
+        self.ap.logger.debug(f"[Msg2Forward] 原始消息长度: {len(original_msg)} | 处理后长度: {len(processed_msg)}")
         
+        # Step 2: 判断是否需要转发
+        need_forward = (
+            len(processed_msg) >= self.config['threshold'] 
+            and sender_id != launcher_id  # 排除私聊
+        )
+        
+        if need_forward:
+            # 准备转发消息
+            forward_messages = self.forwarder.convert_to_forward(processed_msg)
+            await self.forwarder.send_forward(
+                launcher_id=str(launcher_id),
+                messages=forward_messages,
+                prompt=self.config['prompt_template'],
+                # summary=self.config['summary_template'].format(count=len(processed_msg)),
+                summary=self.config['summary_template'],
+                source="bot消息",
+                **self.config['sender_info'],
+                mode=self.config['forward_mode']
+            )
+            ctx.prevent_default()  # 阻止默认回复
+        else:
+            # 如果消息被修改过但不需要转发，则更新回复内容
+            if processed_msg != original_msg:
+                # ctx.event.response_text = processed_msg
+                ctx.add_return("reply", [processed_msg])
+                self.ap.logger.info("[Msg2Forward] 已清理标签消息但未达转发阈值")
 
-    # 插件卸载时触发
     def __del__(self):
         pass
