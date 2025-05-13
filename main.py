@@ -62,8 +62,8 @@ class Msg2Forward(BasePlugin):
         )
         
         # 优化排版
-        msg = re.sub(r'\n{3,}', '\n\n', msg)          # 合并多个空行
-        msg = re.sub(r'(?<!\n)\n(?!\n)', ' ', msg)    # 单换行转空格
+        # msg = re.sub(r'\n{3,}', '\n\n', msg)          # 合并多个空行
+        # msg = re.sub(r'(?<!\n)\n(?!\n)', ' ', msg)    # 单换行转空格
         return msg.strip()
 
     @handler(NormalMessageResponded)

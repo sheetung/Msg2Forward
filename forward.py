@@ -25,7 +25,7 @@ class ForwardMessage:
         # 构建消息节点
         if mode == "single":
             nodes = self._build_single_node(messages, user_id, nickname)
-            item_count = len(nodes[0]['data']['content']) if nodes else 0
+            item_count = '1'
         else:
             nodes = self._build_nodes(messages, user_id, nickname)
             item_count = len(nodes)
