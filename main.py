@@ -11,29 +11,39 @@ from .forward import ForwardMessage
 class Msg2Forward(BasePlugin):
     
     # 默认配置（可在配置文件中覆盖）
-    default_config = {
-        'threshold': 200,          # 触发转发的消息长度阈值
-        'enable_tag_clean': True,  # 是否启用标签清理功能
-        'sender_info': {
-            'user_id': '1000000',  # 转发消息的发送者ID
-            'nickname': 'bot'      # 转发消息的发送者昵称
-        },
-        'prompt_template': "长消息播报",
-        'summary_template': "长消息播报转发",
-        'forward_mode': 'single'  # 转发模式：single/multi
-    }
+    # default_config = {
+    #     'threshold': 200,          # 触发转发的消息长度阈值
+    #     'enable_tag_clean': True,  # 是否启用标签清理功能
+    #     'sender_info': {
+    #         'user_id': '1000000',  # 转发消息的发送者ID
+    #         'nickname': 'bot'      # 转发消息的发送者昵称
+    #     },
+    #     'prompt_template': "长消息播报",
+    #     'summary_template': "长消息播报转发",
+    #     'forward_mode': 'single'  # 转发模式：single/multi
+    # }
 
     def __init__(self, host: APIHost):
         # 初始化转发器和合并配置
         self.forwarder = ForwardMessage("127.0.0.1", 3000)
-        self.config = self.default_config # 合并默认配置和用户配置
+        self.M2Fconfig  = {
+            'threshold': 200,          # 触发转发的消息长度阈值
+            'enable_tag_clean': True,  # 是否启用标签清理功能
+            'sender_info': {
+                'user_id': '1000000',  # 转发消息的发送者ID
+                'nickname': 'bot'      # 转发消息的发送者昵称
+            },
+            'prompt_template': "长消息播报",
+            'summary_template': "长消息播报转发",
+            'forward_mode': 'single'  # 转发模式：single/multi
+        }
         
     def _clean_message_tags(self, msg: str) -> str:
         """
         清理消息中的特殊标签（增强版）
         移除所有指定标签及其内容，并优化排版
         """
-        if not self.config['enable_tag_clean']:
+        if not self.M2Fconfig['enable_tag_clean']:
             return msg
             
         # 清理完整标签对
@@ -85,7 +95,7 @@ class Msg2Forward(BasePlugin):
         
         # Step 2: 判断是否需要转发
         need_forward = (
-            len(processed_msg) >= self.config['threshold'] 
+            len(processed_msg) >= self.M2Fconfig['threshold'] 
             and sender_id != launcher_id  # 排除私聊
         )
         
@@ -95,12 +105,12 @@ class Msg2Forward(BasePlugin):
             await self.forwarder.send_forward(
                 launcher_id=str(launcher_id),
                 messages=forward_messages,
-                prompt=self.config['prompt_template'],
+                prompt=self.M2Fconfig['prompt_template'],
                 # summary=self.config['summary_template'].format(count=len(processed_msg)),
-                summary=self.config['summary_template'],
+                summary=self.M2Fconfig['summary_template'],
                 source="bot消息",
-                **self.config['sender_info'],
-                mode=self.config['forward_mode']
+                **self.M2Fconfig['sender_info'],
+                mode=self.M2Fconfig['forward_mode']
             )
             ctx.prevent_default()  # 阻止默认回复
         else:
